@@ -3,16 +3,7 @@ defmodule Hanabi do
   Documentation for Hanabi.
   """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Hanabi.hello
-      :world
-
-  """
-  def hello do
-    :world
+  def start(_type, _args) do
+    Hanabi.Supervisor.start_link
   end
 end
