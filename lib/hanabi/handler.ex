@@ -24,6 +24,12 @@ defmodule Hanabi.Handler do
           handle_join(client, channel)
         { "PART", [channel | part_message], client } ->
           handle_part(client, channel, part_message)
+        { "WHO", [channel], client } ->
+          handle_who(client, channel)
+        { "PRIVMSG", [channel | parts ], client } ->
+          handle_privmsg(client, channel, parts)
+        { "QUIT", parts, client } ->
+          handle_quit(client, ["QUIT" | parts])
         _ ->
           IO.puts "Unhandled event!"
           IO.inspect(event)
@@ -44,8 +50,8 @@ defmodule Hanabi.Handler do
     :noop
   end
 
-  def channel_broadcast(channel, msg) do
-    Enum.each channel.users, fn(user) ->
+  def broadcast(users, msg) do
+    Enum.each users, fn(user) ->
       case user do
         {:irc, _, client} -> reply client, msg
         _ -> :noop
@@ -57,7 +63,7 @@ defmodule Hanabi.Handler do
   # Handling stuff
 
   defp handle_nick(client, nick) do
-    user = Registry.get :users, client
+    {:ok, user} = Registry.get :users, client
     # Need to set ident here, as the reply needs to contain old nick
     ident = user |> User.ident_for
     Registry.set :users, client, struct(user, %{nick: nick})
@@ -89,7 +95,7 @@ defmodule Hanabi.Handler do
     # Add this channel to the list of channels for the user
     Registry.set :users, client, struct(user, %{channels: user.channels ++ [channel_name]})
 
-    channel_broadcast(channel, "#{ident} JOIN #{channel_name}")
+    broadcast(channel.users, "#{ident} JOIN #{channel_name}")
 
     # Send the topic to the new client
     # RPL_TOPIC 332
@@ -97,19 +103,18 @@ defmodule Hanabi.Handler do
 
     # And a list of names
     # RPL_NAMREPLY 353
-    names = Enum.map(channel.users, fn({_,nick,_}) -> nick end) |> Enum.join
+    names = Enum.map(channel.users, fn({_,nick,_}) -> nick end) |> Enum.join(" ")
     reply(client, ":irc.localhost 353 #{user.nick} = #{channel_name} :#{names}")
     #reply(client, ":irc.localhost 366 #{user.nick} #{channel_name} :End of /NAMES list.")
   end
 
-   defp handle_part(client, channel_name, part_message) do
-     {:ok, user} = Registry.get :users, client
+  defp handle_part(client, channel_name, part_message) do
+    {:ok, user} = Registry.get :users, client
+    {:ok, channel} = Registry.get :channels, channel_name
     ident = User.ident_for(user)
 
-     {:ok, channel} = Registry.get :channels, channel_name
-
     part_message = Enum.join(part_message, " ")
-    channel_broadcast(channel, "#{ident} PART #{channel_name} #{part_message}")
+    broadcast(channel.users, "#{ident} PART #{channel_name} #{part_message}")
 
     # User has left the channel, so delete them from list.
     Registry.set :users, client, struct(user, %{channels: List.delete(user.channels, channel_name)})
@@ -119,5 +124,46 @@ defmodule Hanabi.Handler do
     else
       Registry.drop :channels, channel_name
     end
+  end
+
+  defp handle_privmsg(client, channel_name, parts) do
+    {:ok, user} = Registry.get :users, client
+    {:ok, channel} = Registry.get :channels, channel_name
+    ident = User.ident_for(user)
+
+    message = Enum.join(parts, " ")
+    IO.inspect channel.users
+    IO.inspect user.nick
+    case Enum.any?(channel.users, fn ({_, _, conn}) -> conn == client end) do
+      true ->
+        IO.inspect channel.users
+        IO.inspect user.nick
+        users = Enum.reject(channel.users, fn ({_, _, conn}) -> conn == client end)
+        broadcast(users, "#{ident} PRIVMSG #{channel_name} #{message}")
+      false ->
+      reply(client, ":irc.localhost 404 #{user.nick} #{channel_name} :Cannot send to channel")
+    end
+  end
+
+  defp handle_who(_socket, _channel) do
+    # @TODO
+  end
+
+  defp handle_quit(client, parts) do
+    {:ok, user} = Registry.get :users, client
+    ident = User.ident_for(user)
+
+    msg = "#{ident} #{Enum.join(parts, " ")}"
+    broadcast_for(user, msg)
+
+    Enum.each user.channels, fn(channel) ->
+      # Remove NICK from CHANNEL
+    end
+
+    # Destroy user
+    Registry.drop :users, client
+
+    # Close connection.
+    :gen_tcp.close(client)
   end
 end
