@@ -43,6 +43,12 @@ defmodule Hanabi.Handler do
   end
 
   def channel_broadcast(channel, msg) do
+    Enum.each channel.users, fn(user) ->
+      case user do
+        {:irc, _, client} -> reply client, msg
+        _ -> :noop
+      end
+    end
   end
 
   #################
@@ -75,7 +81,7 @@ defmodule Hanabi.Handler do
         end
 
     # User has joined channel, so add them to the list.
-    channel = struct(channel, %{users: channel.users ++ [user.nick]})
+    channel = struct(channel, %{users: channel.users ++ [{:irc, user.nick, client}]})
     Registry.set :channels, channel_name, channel
 
     # Add this channel to the list of channels for the user
@@ -83,11 +89,14 @@ defmodule Hanabi.Handler do
 
     channel_broadcast(channel, "#{ident} JOIN #{channel_name}")
 
-    # Show the topic
+    # Send the topic to the new client
+    # RPL_TOPIC 332
     reply(client, ":irc.localhost 332 #{user.nick} #{channel_name} :topic !")
+
     # And a list of names
-    names = channel.users |> Enum.join(" ")
+    # RPL_NAMREPLY 353
+    names = Enum.map(channel.users, fn({_,nick,_}) -> nick end) |> Enum.join
     reply(client, ":irc.localhost 353 #{user.nick} = #{channel_name} :#{names}")
-    reply(client, ":irc.localhost 366 #{user.nick} #{channel_name} :End of /NAMES list.")
+    #reply(client, ":irc.localhost 366 #{user.nick} #{channel_name} :End of /NAMES list.")
   end
 end
