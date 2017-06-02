@@ -1,4 +1,5 @@
 defmodule Hanabi.Server do
+  import Hanabi.Handler, only: [reply: 2]
   alias Hanabi.Registry
   alias Hanabi.User
 
@@ -6,8 +7,9 @@ defmodule Hanabi.Server do
     GenEvent.start_link(name: Events)
     GenEvent.add_handler(Events, Hanabi.Handler, [])
 
-    # Create the :users registry
+    # Create the :users and :channels registries
     Registry.create(:users)
+    Registry.create(:channels)
 
     case :gen_tcp.listen(port, [:binary, packet: :line, active: false, reuseaddr: true]) do
       { :ok, socket } ->
@@ -43,8 +45,10 @@ defmodule Hanabi.Server do
         case data do
           ["NICK" | nick] ->
             hostname = resolve_hostname(client)
-            Registry.set(:users, client, struct(user, %{nick: nick, hostname: hostname}))
-            IO.puts "Setting nick!"
+            Registry.set(:users, client, struct(user,
+                                                %{nick: List.to_string(nick),
+                                                  hostname: hostname})
+            )
           ["USER", username, _mode, _ | real_name_parts] ->
             Registry.set(:users, client,
                          struct(user, %{
@@ -52,15 +56,15 @@ defmodule Hanabi.Server do
                            real_name:  Enum.join(real_name_parts, " ")}
                          )
             )
-            IO.puts "Setting user!"
           other -> IO.inspect("Received unknown message: #{Enum.join(other, "")}")
         end
 
         {:ok, user} = Registry.get(:users, client)
-        unless user.nick == nil || user.hostname == nil do
+        unless user.nick == nil || user.hostname == nil || user.username == nil do
             # User has connected and sent through NICK + USER messages.
-            welcome(client, user.nick)
             IO.inspect Registry.get(:users, client)
+            welcome(client, user.nick)
+            serve(client)
         else
             # User has not sent through all the right messages yet.
             # Keep listening!
@@ -70,6 +74,21 @@ defmodule Hanabi.Server do
       { :error, :closed } ->
         IO.puts "Connection closed by client."
     end
+  end
+
+  defp serve(client) do
+    case :gen_tcp.recv(client, 0) do
+      { :ok, data } ->
+        IO.puts "<- #{String.strip(data)}"
+        String.strip(data) |> String.split(" ") |> dispatch(client)
+        serve(client)
+      { :error, :closed } ->
+        IO.puts "Connection closed by client."
+    end
+  end
+
+  defp dispatch([event | parts], client) do
+    GenEvent.notify(Events, { event, parts, client })
   end
 
   defp resolve_hostname(client) do
@@ -84,7 +103,7 @@ defmodule Hanabi.Server do
   end
 
   defp welcome(client, nick) do
-    :gen_tcp.send(client, ":irc.localhost 001 #{nick} Welcome to Hanabi. \r\n")
-    :gen_tcp.send(client, ":irc.localhost 002 #{nick} Yeah, it's pretty empty. \r\n")
+    reply(client, ":irc.localhost 001 #{nick} Welcome to Hanabi !")
+    reply(client, ":irc.localhost 002 #{nick} Yeah, it's pretty empty.")
   end
 end
