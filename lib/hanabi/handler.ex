@@ -29,6 +29,8 @@ defmodule Hanabi.Handler do
           handle_who(client, channel)
         { "PRIVMSG", [channel | parts ], client } ->
           handle_privmsg(client, channel, parts)
+        { "TOPIC", [channel | topic_parts], client } ->
+          handle_topic(client, channel, topic_parts)
         { "QUIT", parts, client } ->
           handle_quit(client, ["QUIT" | parts])
         _ ->
@@ -99,7 +101,7 @@ defmodule Hanabi.Handler do
 
     # Send the topic to the new client
     # RPL_TOPIC 332
-    reply(client, ":irc.localhost 332 #{user.nick} #{channel_name} :topic !")
+    reply(client, ":irc.localhost 332 #{user.nick} #{channel_name} :#{channel.topic}")
 
     # And a list of names
     # RPL_NAMREPLY 353
@@ -143,6 +145,12 @@ defmodule Hanabi.Handler do
 
   defp handle_who(_socket, _channel) do
     # @TODO
+  end
+
+  defp handle_topic(client, channel_name, topic_parts) do
+    topic = Enum.join(topic_parts, " ")
+    {:ok, channel} = Registry.get :channels, channel_name
+    Channel.set_topic(channel_name, topic)
   end
 
   defp handle_quit(client, parts) do
