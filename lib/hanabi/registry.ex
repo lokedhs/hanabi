@@ -17,6 +17,10 @@ defmodule Hanabi.Registry do
     end
   end
 
+  def dump(name) do
+    :ets.match(name, :"$1")
+  end
+
   def drop(name, key) do
     :ets.delete(name, key)
   end
