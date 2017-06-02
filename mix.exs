@@ -3,8 +3,11 @@ defmodule Hanabi.Mixfile do
 
   def project do
     [app: :hanabi,
-     version: "0.1.0",
+     version: "0.0.1",
      elixir: "~> 1.4",
+     name: "Hanabi",
+     source_url: "https://github.com/fnux/hanabi",
+     docs: [main: "readme", extras: ["README.md"]],
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
      deps: deps()]
@@ -29,6 +32,6 @@ defmodule Hanabi.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [{:ex_doc, "~> 0.16", only: :dev, runtime: false}]
   end
 end
