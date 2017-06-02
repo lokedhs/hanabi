@@ -22,6 +22,8 @@ defmodule Hanabi.Handler do
           handle_nick(client, nick)
         { "JOIN", [channel], client } ->
           handle_join(client, channel)
+        { "PART", [channel | part_message], client } ->
+          handle_part(client, channel, part_message)
         _ ->
           IO.puts "Unhandled event!"
           IO.inspect(event)
@@ -98,5 +100,24 @@ defmodule Hanabi.Handler do
     names = Enum.map(channel.users, fn({_,nick,_}) -> nick end) |> Enum.join
     reply(client, ":irc.localhost 353 #{user.nick} = #{channel_name} :#{names}")
     #reply(client, ":irc.localhost 366 #{user.nick} #{channel_name} :End of /NAMES list.")
+  end
+
+   defp handle_part(client, channel_name, part_message) do
+     {:ok, user} = Registry.get :users, client
+    ident = User.ident_for(user)
+
+     {:ok, channel} = Registry.get :channels, channel_name
+
+    part_message = Enum.join(part_message, " ")
+    channel_broadcast(channel, "#{ident} PART #{channel_name} #{part_message}")
+
+    # User has left the channel, so delete them from list.
+    Registry.set :users, client, struct(user, %{channels: List.delete(user.channels, channel_name)})
+    names = Enum.reject(channel.users, fn ({_, nick, _}) -> nick == user.nick end)
+    unless Enum.empty?(names) do
+      Registry.set :channels, channel_name, struct(channel,%{users: names})
+    else
+      Registry.drop :channels, channel_name
+    end
   end
 end
