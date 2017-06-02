@@ -1,5 +1,6 @@
 defmodule Hanabi.Server do
   import Hanabi.Handler, only: [reply: 2]
+  require Logger
   alias Hanabi.Registry
   alias Hanabi.User
 
@@ -14,10 +15,10 @@ defmodule Hanabi.Server do
     case :gen_tcp.listen(port, [:binary, packet: :line, active: false, reuseaddr: true]) do
       { :ok, socket } ->
         Task.async(fn -> loop_acceptor(socket) end)
-        IO.puts "Hanabi is up and running ! Now accepting requests on port #{port}."
+        Logger.info "Hanabi is up and running ! Port: #{port}"
         Hanabi.Handler.handle_events
       { :error, :eaddrinuse } ->
-        IO.puts "Address already in use ;("
+        Logger.error "Address already in use ;("
         System.halt(1)
     end
   end
@@ -56,13 +57,13 @@ defmodule Hanabi.Server do
                            real_name:  Enum.join(real_name_parts, " ")}
                          )
             )
-          other -> IO.inspect("Received unknown message: #{Enum.join(other, "")}")
+          other -> Logger.debug "Received unknown message: #{Enum.join(other, "")}"
         end
 
         {:ok, user} = Registry.get(:users, client)
         unless user.nick == nil || user.hostname == nil || user.username == nil do
             # User has connected and sent through NICK + USER messages.
-            IO.inspect Registry.get(:users, client)
+            Logger.debug "New user connected #{User.ident_for(user)}"
             welcome(client, user.nick)
             serve(client)
         else
@@ -72,18 +73,17 @@ defmodule Hanabi.Server do
         end
 
       { :error, :closed } ->
-        IO.puts "Connection closed by client."
+        Logger.debug "Connection closed by client."
     end
   end
 
   defp serve(client) do
     case :gen_tcp.recv(client, 0) do
       { :ok, data } ->
-        IO.puts "<- #{String.strip(data)}"
         String.strip(data) |> String.split(" ") |> dispatch(client)
         serve(client)
       { :error, :closed } ->
-        IO.puts "Connection closed by client."
+        Logger.debug "Connection closed by client."
     end
   end
 
@@ -97,7 +97,7 @@ defmodule Hanabi.Server do
       { :ok, { :hostent, hostname, _, _, _, _}} ->
         hostname
       { :error, _error } ->
-        IO.puts "Could not resolve hostname for #{ip}. Using IP instead."
+        Logger.debug "Could not resolve hostname for #{ip}. Using IP instead."
         Enum.join(Tuple.to_list(ip), ".")
     end
   end

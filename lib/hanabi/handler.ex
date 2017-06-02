@@ -1,8 +1,9 @@
 defmodule Hanabi.Handler do
+  require Logger
+  use GenEvent
   alias Hanabi.User
   alias Hanabi.Channel
   alias Hanabi.Registry
-  use GenEvent
 
   def handle_event({ event, parts, client }, messages) do
     { :ok, [{event, parts, client} | messages ]}
@@ -31,7 +32,7 @@ defmodule Hanabi.Handler do
         { "QUIT", parts, client } ->
           handle_quit(client, ["QUIT" | parts])
         _ ->
-          IO.puts "Unhandled event!"
+          Logger.warn "Unhandled event !"
           IO.inspect(event)
       end
     end
@@ -41,11 +42,10 @@ defmodule Hanabi.Handler do
   # Broadcast & reply
 
   def reply(client, msg) do
-    IO.puts("-> #{msg}")
     :gen_tcp.send(client, "#{msg}\r\n")
   end
 
-  def broadcast_for(user, msg) do
+  def broadcast_for(_user, _msg) do
     # Boradcast on all channels containing the user
     :noop
   end
@@ -132,12 +132,8 @@ defmodule Hanabi.Handler do
     ident = User.ident_for(user)
 
     message = Enum.join(parts, " ")
-    IO.inspect channel.users
-    IO.inspect user.nick
     case Enum.any?(channel.users, fn ({_, _, conn}) -> conn == client end) do
       true ->
-        IO.inspect channel.users
-        IO.inspect user.nick
         users = Enum.reject(channel.users, fn ({_, _, conn}) -> conn == client end)
         broadcast(users, "#{ident} PRIVMSG #{channel_name} #{message}")
       false ->
@@ -156,11 +152,12 @@ defmodule Hanabi.Handler do
     msg = "#{ident} #{Enum.join(parts, " ")}"
     broadcast_for(user, msg)
 
-    Enum.each user.channels, fn(channel) ->
-      # Remove NICK from CHANNEL
+    Enum.each user.channels, fn(_channel) ->
+      :noop  # Remove NICK from CHANNEL
     end
 
     # Destroy user
+    Logger.debug "Closing connection on destroying user #{User.ident_for(user)}"
     Registry.drop :users, client
 
     # Close connection.
