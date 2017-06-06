@@ -1,5 +1,5 @@
-defmodule Hanabi.BridgeControl do
-  alias Hanabi.Registry
+defmodule Hanabi.Control do
+  alias Hanabi.{Registry, User}
 
   @moduledoc """
   @TODO
@@ -14,10 +14,8 @@ defmodule Hanabi.BridgeControl do
 
   ###
   # Interact with users
-  def get_users(), do: Registry.dump(:users)
-  def get_user_by_nick(nick) do
-    Enum.find(get_users(), fn([{_,user}]) -> user.nick == nick end)
-  end
+  def get_users(), do: User.get_all()
+  def get_user_by_nick(nick), do: User.get_by_nick(nick)
   # -> set properties ?
 
   ###
@@ -26,6 +24,9 @@ defmodule Hanabi.BridgeControl do
   def get_channels(), do: Registry.dump(:channels)
   def get_channel_by_name(name), do: Registry.get(:channels, name)
   def set_topic(channel, topic) do
+    # @TODO
+  end
+  def add_user(channel, user) do
     # @TODO
   end
 end

@@ -12,7 +12,7 @@ defmodule Hanabi.Registry do
 
   def get(name, key) do
     case :ets.lookup(name, key) do
-      [{key, value}] -> {:ok, value}
+      [{_key, value}] -> {:ok, value}
       [] -> {:error, :not_found}
     end
   end

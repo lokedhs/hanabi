@@ -1,6 +1,7 @@
 defmodule Hanabi do
   import Supervisor.Spec
-  @port 5674
+
+  @port Application.get_env :hanabi, :port
 
   def start(_type, _args) do
     Supervisor.start_link(__MODULE__, :ok, [])

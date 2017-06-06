@@ -1,9 +1,7 @@
 defmodule Hanabi.Handler do
   require Logger
   use GenEvent
-  alias Hanabi.User
-  alias Hanabi.Channel
-  alias Hanabi.Registry
+  alias Hanabi.{User, Channel, Registry, IRC}
 
   def handle_event({ event, parts, client }, messages) do
     { :ok, [{event, parts, client} | messages ]}
@@ -40,106 +38,43 @@ defmodule Hanabi.Handler do
     end
   end
 
-  #####################
-  # Broadcast & reply
-
-  def reply(client, msg) do
-    :gen_tcp.send(client, "#{msg}\r\n")
-  end
-
-  def broadcast_for(_user, _msg) do
-    # Boradcast on all channels containing the user
-    :noop
-  end
-
-  def broadcast(users, msg) do
-    Enum.each users, fn(user) ->
-      case user do
-        {:irc, _, client} -> reply client, msg
-        _ -> :noop
-      end
-    end
-  end
-
   #################
   # Handling stuff
 
   defp handle_nick(client, nick) do
     {:ok, user} = Registry.get :users, client
-    # Need to set ident here, as the reply needs to contain old nick
-    ident = user |> User.ident_for
-    Registry.set :users, client, struct(user, %{nick: nick})
-    msg = "#{ident} NICK #{nick}"
-    broadcast_for(user, msg)
-  end
-
-  defp handle_ping(client, name) do
-    reply(client, "PONG #{name}")
-  end
-
-  defp handle_join(client, channel_name) do
-    {:ok, user} = Registry.get :users, client
-    ident = User.ident_for(user)
-
-    # Attempt to create the channel if it doesn't exist already.
-    channel = case Registry.get(:channels, channel_name) do
-          {:ok, channel} -> channel
-          {:error, _} ->
-            channel = struct(Channel)
-            Registry.set(:channels, channel_name, channel)
-            channel
-        end
-
-    # User has joined channel, so add them to the list.
-    channel = struct(channel, %{users: channel.users ++ [{:irc, user.nick, client}]})
-    Registry.set :channels, channel_name, channel
-
-    # Add this channel to the list of channels for the user
-    Registry.set :users, client, struct(user, %{channels: user.channels ++ [channel_name]})
-
-    broadcast(channel.users, "#{ident} JOIN #{channel_name}")
-
-    # Send the topic to the new client
-    # RPL_TOPIC 332
-    reply(client, ":irc.localhost 332 #{user.nick} #{channel_name} :#{channel.topic}")
-
-    # And a list of names
-    # RPL_NAMREPLY 353
-    names = Enum.map(channel.users, fn({_,nick,_}) -> nick end) |> Enum.join(" ")
-    reply(client, ":irc.localhost 353 #{user.nick} = #{channel_name} :#{names}")
-    #reply(client, ":irc.localhost 366 #{user.nick} #{channel_name} :End of /NAMES list.")
-  end
-
-  defp handle_part(client, channel_name, part_message) do
-    {:ok, user} = Registry.get :users, client
-    {:ok, channel} = Registry.get :channels, channel_name
-    ident = User.ident_for(user)
-
-    part_message = Enum.join(part_message, " ")
-    broadcast(channel.users, "#{ident} PART #{channel_name} #{part_message}")
-
-    # User has left the channel, so delete them from list.
-    Registry.set :users, client, struct(user, %{channels: List.delete(user.channels, channel_name)})
-    names = Enum.reject(channel.users, fn ({_, nick, _}) -> nick == user.nick end)
-    unless Enum.empty?(names) do
-      Registry.set :channels, channel_name, struct(channel,%{users: names})
-    else
-      Registry.drop :channels, channel_name
+    validation_regex = ~r/\A[a-z_\-\[\]\\^{}|`][a-z0-9_\-\[\]\\^{}|`]{2,15}\z/
+    cond do
+      !String.match?(nick, validation_regex) ->
+        # 432 ERR_ERRONEUSNICKNAME
+        IRC.reply(client, 432, "#{nick} :Erroneus nickname")
+      User.get_by_nick(nick) != nil ->
+        # 433 ERR_NICKNAMEINUSE
+        IRC.reply(client, 433, "#{nick} :Nickname is already in use")
+      true -> User.set_nick(client, user, nick)
     end
   end
 
-  defp handle_privmsg(client, channel_name, parts) do
-    {:ok, user} = Registry.get :users, client
-    {:ok, channel} = Registry.get :channels, channel_name
-    ident = User.ident_for(user)
+  defp handle_ping(client, name) do
+    IRC.send(client, "PONG #{name}")
+  end
 
-    message = Enum.join(parts, " ")
-    case Enum.any?(channel.users, fn ({_, _, conn}) -> conn == client end) do
-      true ->
-        users = Enum.reject(channel.users, fn ({_, _, conn}) -> conn == client end)
-        broadcast(users, "#{ident} PRIVMSG #{channel_name} #{message}")
-      false ->
-      reply(client, ":irc.localhost 404 #{user.nick} #{channel_name} :Cannot send to channel")
+  defp handle_join(client, channel_name) do
+    User.join_channel(client, channel_name)
+  end
+
+  defp handle_part(client, channel_name, part_message) do
+    part_message = Enum.join(part_message, " ")
+    User.part_channel(client, channel_name, part_message)
+  end
+
+  defp handle_privmsg(client, dst, parts) do
+    msg = Enum.join(parts, " ")
+
+    if String.match?(dst, ~r/^#.*$/) do # PRIVMSG to a channel
+      Channel.privmsg(client, dst, msg)
+    else # PRIVMSG to an user
+      User.privmsg(client, dst, msg)
     end
   end
 
@@ -149,26 +84,12 @@ defmodule Hanabi.Handler do
 
   defp handle_topic(client, channel_name, topic_parts) do
     topic = Enum.join(topic_parts, " ")
-    {:ok, channel} = Registry.get :channels, channel_name
-    Channel.set_topic(channel_name, topic)
+    {:ok, user} = Registry.get :users, client
+    Channel.set_topic(channel_name, user, topic)
   end
 
   defp handle_quit(client, parts) do
-    {:ok, user} = Registry.get :users, client
-    ident = User.ident_for(user)
-
-    msg = "#{ident} #{Enum.join(parts, " ")}"
-    broadcast_for(user, msg)
-
-    Enum.each user.channels, fn(_channel) ->
-      :noop  # Remove NICK from CHANNEL
-    end
-
-    # Destroy user
-    Logger.debug "Closing connection on destroying user #{User.ident_for(user)}"
-    Registry.drop :users, client
-
-    # Close connection.
-    :gen_tcp.close(client)
+    part_message = Enum.join(parts, "")
+    User.quit(client, part_message)
   end
 end

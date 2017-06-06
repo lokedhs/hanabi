@@ -1,8 +1,6 @@
 defmodule Hanabi.Server do
-  import Hanabi.Handler, only: [reply: 2]
   require Logger
-  alias Hanabi.Registry
-  alias Hanabi.User
+  alias Hanabi.{Registry, User, IRC}
 
   def accept(port \\ 6667) do
     GenEvent.start_link(name: Events)
@@ -45,11 +43,20 @@ defmodule Hanabi.Server do
         data = String.strip(data) |> String.split(" ")
         case data do
           ["NICK" | nick] ->
-            hostname = resolve_hostname(client)
-            Registry.set(:users, client, struct(user,
-                                                %{nick: List.to_string(nick),
-                                                  hostname: hostname})
-            )
+             cond do
+                #!String.match?(nick, validation_regex) ->
+                  # 432 ERR_ERRONEUSNICKNAME
+                  #IRC.reply(client, 432, "#{nick} :Erroneus nickname")
+                User.get_by_nick(nick) != nil ->
+                  # 433 ERR_NICKNAMEINUSE
+                  IRC.reply(client, 433, "#{nick} :Nickname is already in use")
+                true ->
+                  hostname = resolve_hostname(client)
+                  Registry.set(:users, client, struct(user,
+                                                      %{nick: List.to_string(nick),
+                                                        hostname: hostname}))
+
+              end
           ["USER", username, _mode, _ | real_name_parts] ->
             Registry.set(:users, client,
                          struct(user, %{
@@ -103,7 +110,7 @@ defmodule Hanabi.Server do
   end
 
   defp welcome(client, nick) do
-    reply(client, ":irc.localhost 001 #{nick} Welcome to Hanabi !")
-    reply(client, ":irc.localhost 002 #{nick} Yeah, it's pretty empty.")
+    IRC.send(client, ":irc.localhost 001 #{nick} Welcome to Hanabi !")
+    IRC.send(client, ":irc.localhost 002 #{nick} Yeah, it's pretty empty.")
   end
 end
