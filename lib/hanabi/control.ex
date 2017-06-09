@@ -6,14 +6,12 @@ defmodule Hanabi.Control do
   """
 
   ###
-  # Interact with the brctl special user
-
-  def register_control_user_handler(pid) do
-    # @TODO
-  end
-
-  ###
   # Interact with users
+  def register(nick, pid) do
+    hostname = Application.get_env :hanabi, :hostname
+    user = struct(User, %{nick: nick, type: :bridge, hostname: hostname})
+    Registry.set :users, pid, user
+  end
   def get_users(), do: User.get_all()
   def get_user_by_nick(nick), do: User.get_by_nick(nick)
   # -> set properties ?

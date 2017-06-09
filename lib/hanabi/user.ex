@@ -5,6 +5,7 @@ defmodule Hanabi.User do
     username: nil,
     realname: nil,
     hostname: nil,
+    type: :irc,
     channels: []
 
   def ident_for(user) do
@@ -31,8 +32,11 @@ defmodule Hanabi.User do
     lookup = get_by_nick(dst)
 
     unless lookup == nil do
-      [{dst_client, _}] = lookup
-      IRC.send(dst_client, "#{ident} PRIVMSG #{dst} #{msg}")
+      [{port_or_pid, client}] = lookup
+      case client.type do
+        :irc -> IRC.send(port_or_pid, "#{ident} PRIVMSG #{dst} #{msg}")
+        :bridge -> Kernel.send(port_or_pid, %{privmsg: msg, sender: user})
+      end
     else
       # 401 ERR_NOSUCHNICK
       IRC.reply(client, 401, "#{user.nick} #{dst} :No such nick/channel")
