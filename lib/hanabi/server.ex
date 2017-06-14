@@ -45,11 +45,12 @@ defmodule Hanabi.Server do
         data = String.strip(data) |> String.split(" ")
         case data do
           ["NICK" | nick] ->
+            {nick_in_use, _} = User.get_by_nick(nick)
              cond do
                 #!String.match?(nick, validation_regex) ->
                   # 432 ERR_ERRONEUSNICKNAME
                   #Dispatch.reply(client, 432, "#{nick} :Erroneus nickname")
-                User.get_by_nick(nick) != nil ->
+                nick_in_use == :ok ->
                   # 433 ERR_NICKNAMEINUSE
                   Dispatch.reply(client, 433, "#{nick} :Nickname is already in use")
                 true ->
