@@ -1,5 +1,5 @@
 defmodule Hanabi.User do
-  alias Hanabi.{Registry, IRC, Channel}
+  alias Hanabi.{Registry, Dispatch, Channel}
 
   @moduledoc false
 
@@ -26,7 +26,7 @@ defmodule Hanabi.User do
     ident = user |> ident_for
     Registry.set :users, client, struct(user, %{nick: nick})
     msg = "#{ident} NICK #{nick}"
-    IRC.broadcast_for(user, msg)
+    Dispatch.broadcast_for(user, msg)
   end
 
   def privmsg(client, dst, msg) do
@@ -37,12 +37,12 @@ defmodule Hanabi.User do
     unless lookup == nil do
       [{port_or_pid, client}] = lookup
       case client.type do
-        :irc -> IRC.send(port_or_pid, "#{ident} PRIVMSG #{dst} #{msg}")
+        :irc -> Dispatch.send(port_or_pid, "#{ident} PRIVMSG #{dst} #{msg}")
         :bridge -> Kernel.send(port_or_pid, %{privmsg: msg, sender: user})
       end
     else
       # 401 ERR_NOSUCHNICK
-      IRC.reply(client, 401, "#{user.nick} #{dst} :No such nick/channel")
+      Dispatch.reply(client, 401, "#{user.nick} #{dst} :No such nick/channel")
     end
 
   end
@@ -66,14 +66,14 @@ defmodule Hanabi.User do
 
     # Add this channel to the list of channels for the user
     Registry.set :users, client, struct(user, %{channels: user.channels ++ [channel_name]})
-    IRC.broadcast(channel.users, "#{ident} JOIN #{channel_name}")
+    Dispatch.broadcast(channel.users, "#{ident} JOIN #{channel_name}")
 
     # Send the channel's topic to the new client (332 RPL_TOPIC)
-    IRC.reply(client, 332, "#{user.nick} #{channel_name} :#{channel.topic}")
+    Dispatch.reply(client, 332, "#{user.nick} #{channel_name} :#{channel.topic}")
 
     # Send the list of the members to the new client (353 RPL_NAMREPLY)
     names = Enum.map(channel.users, fn({_,nick,_}) -> nick end) |> Enum.join(" ")
-    IRC.reply(client, 353, "#{user.nick} = #{channel_name} :#{names}")
+    Dispatch.reply(client, 353, "#{user.nick} = #{channel_name} :#{names}")
   end
 
   def part_channel(client, channel_name, part_message) do
@@ -82,7 +82,7 @@ defmodule Hanabi.User do
     ident = ident_for(user)
 
     # Broadcast PART message
-    IRC.broadcast(channel.users, "#{ident} PART #{channel_name} #{part_message}")
+    Dispatch.broadcast(channel.users, "#{ident} PART #{channel_name} #{part_message}")
 
     # Remove the channel from the user's list.
     Registry.set(:users, client, struct(
@@ -102,7 +102,7 @@ defmodule Hanabi.User do
     {:ok, user} = Registry.get :users, client
 
     # Broadcast part message
-    IRC.broadcast_for(user, part_message)
+    Dispatch.broadcast_for(user, part_message)
 
     Enum.each user.channels, fn(_channel) ->
       :noop  # Remove NICK from CHANNEL

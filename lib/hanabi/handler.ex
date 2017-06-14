@@ -1,7 +1,7 @@
 defmodule Hanabi.Handler do
   require Logger
   use GenEvent
-  alias Hanabi.{User, Channel, Registry, IRC}
+  alias Hanabi.{User, Channel, Registry, Dispatch}
 
   @moduledoc false
 
@@ -49,16 +49,16 @@ defmodule Hanabi.Handler do
     cond do
       !String.match?(nick, validation_regex) ->
         # 432 ERR_ERRONEUSNICKNAME
-        IRC.reply(client, 432, "#{nick} :Erroneus nickname")
+        Dispatch.reply(client, 432, "#{nick} :Erroneus nickname")
       User.get_by_nick(nick) != nil ->
         # 433 ERR_NICKNAMEINUSE
-        IRC.reply(client, 433, "#{nick} :Nickname is already in use")
+        Dispatch.reply(client, 433, "#{nick} :Nickname is already in use")
       true -> User.set_nick(client, user, nick)
     end
   end
 
   defp handle_ping(client, name) do
-    IRC.send(client, "PONG #{name}")
+    Dispatch.send(client, "PONG #{name}")
   end
 
   defp handle_join(client, channel_name) do

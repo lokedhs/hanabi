@@ -1,5 +1,5 @@
 defmodule Hanabi.Channel do
-  alias Hanabi.{IRC, Registry, User}
+  alias Hanabi.{Dispatch, Registry, User}
 
   @moduledoc false
 
@@ -16,7 +16,7 @@ defmodule Hanabi.Channel do
     else
       ":#{hostname} 332 #{channel_name} #{topic}"
     end
-    IRC.broadcast(channel.users, msg)
+    Dispatch.broadcast(channel.users, msg)
   end
 
   def add_user(channel_name, user) do
@@ -24,13 +24,13 @@ defmodule Hanabi.Channel do
     channel = struct(channel, %{users: channel.users ++ [user]})
     Registry.set :channels, channel_name, channel
     {_, nick, _} = user 
-    IRC.broadcast(channel.users, "#{nick} JOIN #{channel_name}")
+    Dispatch.broadcast(channel.users, "#{nick} JOIN #{channel_name}")
   end
 
   def remove_user(channel_name, user, part_msg) do
     channel = Registry.get :channels, channel_name
     {_, user_nick, _} = user 
-    IRC.broadcast(channel.users, "#{user_nick} PART #{channel_name} #{part_msg}")
+    Dispatch.broadcast(channel.users, "#{user_nick} PART #{channel_name} #{part_msg}")
 
     names = Enum.reject(channel.users, fn ({_, nick, _}) -> nick == user_nick end)
     unless Enum.empty?(names) do
@@ -48,10 +48,10 @@ defmodule Hanabi.Channel do
     case Enum.any?(channel.users, fn ({_, _, conn}) -> conn == client end) do
       true ->
         users = Enum.reject(channel.users, fn ({_, _, conn}) -> conn == client end)
-        IRC.broadcast(users, "#{ident} PRIVMSG #{channel_name} #{msg}")
+        Dispatch.broadcast(users, "#{ident} PRIVMSG #{channel_name} #{msg}")
       false ->
         # 404 ERR_CANNOTSENDTOCHAN
-        IRC.reply(client, "404", "#{user.nick} #{channel_name} :Cannot send to channel")
+        Dispatch.reply(client, "404", "#{user.nick} #{channel_name} :Cannot send to channel")
     end
   end
 end

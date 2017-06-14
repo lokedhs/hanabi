@@ -1,6 +1,6 @@
 defmodule Hanabi.Server do
   require Logger
-  alias Hanabi.{Registry, User, IRC}
+  alias Hanabi.{Registry, User, Dispatch}
 
   @moduledoc false
 
@@ -48,10 +48,10 @@ defmodule Hanabi.Server do
              cond do
                 #!String.match?(nick, validation_regex) ->
                   # 432 ERR_ERRONEUSNICKNAME
-                  #IRC.reply(client, 432, "#{nick} :Erroneus nickname")
+                  #Dispatch.reply(client, 432, "#{nick} :Erroneus nickname")
                 User.get_by_nick(nick) != nil ->
                   # 433 ERR_NICKNAMEINUSE
-                  IRC.reply(client, 433, "#{nick} :Nickname is already in use")
+                  Dispatch.reply(client, 433, "#{nick} :Nickname is already in use")
                 true ->
                   hostname = resolve_hostname(client)
                   Registry.set(:users, client, struct(user,
@@ -112,7 +112,7 @@ defmodule Hanabi.Server do
   end
 
   defp welcome(client, nick) do
-    IRC.send(client, ":irc.localhost 001 #{nick} Welcome to Hanabi !")
-    IRC.send(client, ":irc.localhost 002 #{nick} Yeah, it's pretty empty.")
+    Dispatch.send(client, ":irc.localhost 001 #{nick} Welcome to Hanabi !")
+    Dispatch.send(client, ":irc.localhost 002 #{nick} Yeah, it's pretty empty.")
   end
 end
