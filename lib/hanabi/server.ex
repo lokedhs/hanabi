@@ -2,6 +2,8 @@ defmodule Hanabi.Server do
   require Logger
   alias Hanabi.{Registry, User, IRC}
 
+  @moduledoc false
+
   def accept(port \\ 6667) do
     GenEvent.start_link(name: Events)
     GenEvent.add_handler(Events, Hanabi.Handler, [])

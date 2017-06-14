@@ -1,6 +1,8 @@
 defmodule Hanabi.Registry do
   use GenServer
 
+  @moduledoc false
+
   def create(name) do
     table = :ets.new(name, [:named_table, :set, :public, read_concurrency: true])
     {:ok, table}

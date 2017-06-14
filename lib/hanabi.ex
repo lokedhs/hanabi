@@ -1,6 +1,7 @@
 defmodule Hanabi do
   import Supervisor.Spec
 
+  @moduledoc false
   @port Application.get_env :hanabi, :port
 
   def start(_type, _args) do

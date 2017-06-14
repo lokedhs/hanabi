@@ -1,6 +1,8 @@
 defmodule Hanabi.User do
   alias Hanabi.{Registry, IRC, Channel}
 
+  @moduledoc false
+
   defstruct nick: nil,
     username: nil,
     realname: nil,
@@ -15,7 +17,8 @@ defmodule Hanabi.User do
 
   def get_all(), do: Registry.dump(:users)
   def get_by_nick(nick) do
-    Enum.find(get_all(), fn([{_,user}]) -> user.nick == nick end)
+    result = Enum.find(get_all(), fn([{_,user}]) -> user.nick == nick end)
+    if result, do: {:ok, List.first(result)}, else: {:error, :not_found}
   end
 
   def set_nick(client, user, nick) do

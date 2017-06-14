@@ -2,7 +2,7 @@ defmodule Hanabi.IRC do
   #alias Hanabi.{User, Registry}
 
   @moduledoc """
-    See [RFC1459](https://tools.ietf.org/html/rfc1459#section-4.6.3).
+    This module allows to send messages to clients.
   """
 
   @hostname Application.get_env :hanabi, :hostname
@@ -24,7 +24,7 @@ defmodule Hanabi.IRC do
     Enum.each users, fn(user) ->
       case user do
         {:irc, _, client} -> Hanabi.IRC.send client, msg
-        _ -> :noop
+        {:bridge, _, pid} -> Kernel.send pid, {:privmsg, msg}
       end
     end
   end

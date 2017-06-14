@@ -3,6 +3,8 @@ defmodule Hanabi.Handler do
   use GenEvent
   alias Hanabi.{User, Channel, Registry, IRC}
 
+  @moduledoc false
+
   def handle_event({ event, parts, client }, messages) do
     { :ok, [{event, parts, client} | messages ]}
   end
