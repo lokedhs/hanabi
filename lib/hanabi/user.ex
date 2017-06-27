@@ -8,6 +8,7 @@ defmodule Hanabi.User do
     realname: nil,
     hostname: nil,
     type: :irc,
+    port_or_pid: nil,
     channels: []
 
   def ident_for(user) do
@@ -25,21 +26,20 @@ defmodule Hanabi.User do
     # Need to set ident here, as the reply needs to contain old nick
     ident = user |> ident_for
     Registry.set :users, client, struct(user, %{nick: nick})
+
     msg = "#{ident} NICK #{nick}"
-    Dispatch.broadcast_for(user, msg)
+    Dispatch.send client, msg
+    Dispatch.broadcast_for(client, msg)
   end
 
   def privmsg(client, dst, msg) do
     {:ok, user} = Registry.get :users, client
     ident = ident_for(user)
-    lookup = get_by_nick(dst)
+    IO.inspect {status, lookup} = get_by_nick(dst)
 
-    unless lookup == nil do
-      [{port_or_pid, client}] = lookup
-      case client.type do
-        :irc -> Dispatch.send(port_or_pid, "#{ident} PRIVMSG #{dst} #{msg}")
-        :bridge -> Kernel.send(port_or_pid, %{privmsg: msg, sender: user})
-      end
+    unless status == :error do
+      {_key, dst_user} = lookup
+      Dispatch.send(dst_user.port_or_pid, "#{ident} PRIVMSG #{dst} #{msg}")
     else
       # 401 ERR_NOSUCHNICK
       Dispatch.reply(client, 401, "#{user.nick} #{dst} :No such nick/channel")
@@ -62,6 +62,8 @@ defmodule Hanabi.User do
 
     # Add the user to the channel's members
     channel = struct(channel, %{users: channel.users ++ [{:irc, user.nick, client}]})
+
+    # Add the user to the channel
     Registry.set :channels, channel_name, channel
 
     # Add this channel to the list of channels for the user
@@ -102,7 +104,7 @@ defmodule Hanabi.User do
     {:ok, user} = Registry.get :users, client
 
     # Broadcast part message
-    Dispatch.broadcast_for(user, part_message)
+    Dispatch.broadcast_for(client, part_message)
 
     Enum.each user.channels, fn(_channel) ->
       :noop  # Remove NICK from CHANNEL
@@ -113,5 +115,12 @@ defmodule Hanabi.User do
 
     # Close connection.
     :gen_tcp.close(client)
+  end
+
+  def is_nick_in_use?(nick) do
+    case get_by_nick(nick) do
+      {:ok, _} -> true
+      _ -> false
+    end
   end
 end

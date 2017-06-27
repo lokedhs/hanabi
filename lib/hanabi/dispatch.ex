@@ -1,4 +1,5 @@
 defmodule Hanabi.Dispatch do
+  alias Hanabi.Registry
 
   @hostname Application.get_env :hanabi, :hostname
   @moduledoc """
@@ -6,27 +7,39 @@ defmodule Hanabi.Dispatch do
   """
 
   @doc """
-  **IRC only.**
-  Send a message (`#\{msg\}\\r\\n`) to the given IRC client.
+  Send a message to an IRC or Hanabi client.
   """
   def send(client, msg) do
-    :gen_tcp.send(client, "#{msg}\r\n")
+    cond do
+      Kernel.is_pid(client) -> Kernel.send client, {:msg, msg}
+      Kernel.is_port(client) -> send_irc(client, msg)
+    end
   end
 
+  # Send a message (`#\{msg\}\\r\\n`) to the given IRC client.
+  defp send_irc(client, msg), do: :gen_tcp.send(client, "#{msg}\r\n")
+
   @doc """
-  **IRC only.**
-  Send a "reply" (`:#\{@hosntame\} #\{code\} #\{msg\}\\r\\n`) to an IRC client.
+  Send a "reply" (including a code) to an IRC or Hanabi client.
   """
   def reply(client, code, msg) do
-    Hanabi.Dispatch.send client, ":#{@hostname} #{code} #{msg}"
+    cond do
+      Kernel.is_pid(client) ->
+        Kernel.send client, {:reply, code, msg}
+      Kernel.is_port(client) ->
+        send_irc client, ":#{@hostname} #{code} #{msg}"
+    end
   end
 
   @doc """
-  Not yet implemented.
+  Broadcast a message to all channels containing the user.
   """
-  def broadcast_for(_user, _msg) do
-    # Boradcast on all channels containing the user
-    :noop
+  def broadcast_for(user_key, msg) do
+    {:ok, user} = Registry.get :users, user_key
+    Enum.each user.channels, fn(channel_name) ->
+      {:ok, channel} = Registry.get :channels, channel_name
+      broadcast channel.users, msg
+    end
   end
 
   @doc """
@@ -37,10 +50,8 @@ defmodule Hanabi.Dispatch do
   """
   def broadcast(users, msg) do
     Enum.each users, fn(user) ->
-      case user do
-        {:irc, _, client} -> Hanabi.Dispatch.send client, msg
-        {:bridge, _, pid} -> Kernel.send pid, {:privmsg, msg}
-      end
+      {_type, _, client} = user
+      Hanabi.Dispatch.send client, msg
     end
   end
 end

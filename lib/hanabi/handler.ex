@@ -50,7 +50,7 @@ defmodule Hanabi.Handler do
       !String.match?(nick, validation_regex) ->
         # 432 ERR_ERRONEUSNICKNAME
         Dispatch.reply(client, 432, "#{nick} :Erroneus nickname")
-      User.get_by_nick(nick) != nil ->
+      User.is_nick_in_use?(nick) ->
         # 433 ERR_NICKNAMEINUSE
         Dispatch.reply(client, 433, "#{nick} :Nickname is already in use")
       true -> User.set_nick(client, user, nick)

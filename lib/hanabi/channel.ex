@@ -20,19 +20,19 @@ defmodule Hanabi.Channel do
   end
 
   def add_user(channel_name, user) do
-    channel = Registry.get :channels, channel_name
-    channel = struct(channel, %{users: channel.users ++ [user]})
+    {:ok, channel} = Registry.get :channels, channel_name
+    channel = struct(channel, %{users: channel.users
+              ++ [{user.type, user.nick, user.port_or_pid}]})
     Registry.set :channels, channel_name, channel
-    {_, nick, _} = user 
-    Dispatch.broadcast(channel.users, "#{nick} JOIN #{channel_name}")
+    IO.inspect channel
+    Dispatch.broadcast(channel.users, "#{User.ident_for(user)} JOIN #{channel_name}")
   end
 
-  def remove_user(channel_name, user, part_msg) do
-    channel = Registry.get :channels, channel_name
-    {_, user_nick, _} = user 
-    Dispatch.broadcast(channel.users, "#{user_nick} PART #{channel_name} #{part_msg}")
+  def remove_user(channel_name, user, part_msg \\ "") do
+    {:ok, channel} = Registry.get :channels, channel_name
+    Dispatch.broadcast(channel.users, "#{User.ident_for(user)} PART #{channel_name} #{part_msg}")
 
-    names = Enum.reject(channel.users, fn ({_, nick, _}) -> nick == user_nick end)
+    names = Enum.reject(channel.users, fn ({_, nick, _}) -> nick == user.nick end)
     unless Enum.empty?(names) do
       Registry.set :channels, channel_name, struct(channel,%{users: names})
     else

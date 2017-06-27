@@ -45,19 +45,19 @@ defmodule Hanabi.Server do
         data = String.strip(data) |> String.split(" ")
         case data do
           ["NICK" | nick] ->
-            {nick_in_use, _} = User.get_by_nick(nick)
              cond do
                 #!String.match?(nick, validation_regex) ->
                   # 432 ERR_ERRONEUSNICKNAME
                   #Dispatch.reply(client, 432, "#{nick} :Erroneus nickname")
-                nick_in_use == :ok ->
+                User.is_nick_in_use?(nick) == true ->
                   # 433 ERR_NICKNAMEINUSE
                   Dispatch.reply(client, 433, "#{nick} :Nickname is already in use")
                 true ->
                   hostname = resolve_hostname(client)
                   Registry.set(:users, client, struct(user,
                                                       %{nick: List.to_string(nick),
-                                                        hostname: hostname}))
+                                                        hostname: hostname,
+                                                        port_or_pid: client}))
 
               end
           ["USER", username, _mode, _ | real_name_parts] ->
