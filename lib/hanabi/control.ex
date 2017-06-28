@@ -3,7 +3,6 @@ defmodule Hanabi.Control do
 
   @moduledoc """
   This module allows you to interact with the IRC server.
-  @explain bridge user
   """
 
   ###
@@ -15,8 +14,9 @@ defmodule Hanabi.Control do
   Returns either `{:ok, struct(Hanabi.User)}` or `{:error, :nick_in_use}`.
 
   ## Messages
-    * @TODO
-    * @TODO
+
+  * `{:msg, message}`
+  * `{:reply, code, message}`
 
   ## Example
   ```
@@ -68,18 +68,14 @@ defmodule Hanabi.Control do
 
   @doc """
   Remove a "bridge" user from the server.
-
-  ## Example
-
-  @TODO
   """
-  def unregister_user(nick) do
-    {status, user} = Registry.get :users, nick
+  def unregister_user(user_key) do
+    {status, user} = Registry.get :users, user_key
     if status == :ok do
       for channel <- user.channels do
-        Channel.remove_user(channel, nick)
+        Channel.remove_user(channel, user.nick)
       end
-      Registry.drop :users, nick
+      Registry.drop :users, user_key
     else
       {:error, :not_such_user}
     end
@@ -183,8 +179,9 @@ defmodule Hanabi.Control do
   Remove an user from the given channel.
 
   ## Example
-
-  @TODO
+  ```
+  Hanabi.Control.remove_user_from_channel("#test", user_key, "Bye ~")
+  ```
   """
   def remove_user_from_channel(channel, user_key, part_msg \\ "") do
     {:ok, user} = Registry.get :users, user_key

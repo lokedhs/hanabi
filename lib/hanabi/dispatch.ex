@@ -3,7 +3,7 @@ defmodule Hanabi.Dispatch do
 
   @hostname Application.get_env :hanabi, :hostname
   @moduledoc """
-  Dispatch messages to IRC/Bridge clients.
+  Send messages to IRC/Hanabi clients.
   """
 
   @doc """
@@ -46,7 +46,11 @@ defmodule Hanabi.Dispatch do
   Broadcast a message to multiple users.
 
   ## Example
-  @TODO
+
+  ```
+  users = [{:irc, "lambda", #Port<0.6628>}, {:irc, "fnux", #Port<0.6607>}]
+  Hanabi.Dispatch.broadcast(users, "Hello world!")
+  ```
   """
   def broadcast(users, msg) do
     Enum.each users, fn(user) ->

@@ -21,15 +21,14 @@ config :hanabi, port: 6667,
 
 You only have to add `hanabi` in the dependency section of your `mix.exs` file.
 You can add `:hanabi` to `:extra_applications` in order to start it automatically,
-otherwise you would have to use `Hanabi.start()` to do so.
+otherwise you would have to use `Hanabi.start()`.
 
 Any other interaction with `Hanabi` should use the `Hanabi.Control` module.
-@TODO : add examples.
 
 ## Struture
 
 Hanabi is splitted in a few modules, most of them are not displayed in the
-generated ([here (BROKEN!)](#)) documentation since they are not supposed
+generated ([here](#)) documentation since they are not supposed
 to be used to be used out of Hanabi. Feel free to take to look to the [source
 code](https://github.com/Fnux/hanabi).
 
@@ -39,5 +38,5 @@ code](https://github.com/Fnux/hanabi).
   * `Hanabi.Handler` :
   * `Hanabi.User` :
   * `Hanabi.Channel` :
-  * `Hanabi.IRC` :
+  * `Hanabi.Dispatch` :
   * `Hanabi.Control` :
