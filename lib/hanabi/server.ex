@@ -3,6 +3,8 @@ defmodule Hanabi.Server do
   alias Hanabi.{Registry, User, Dispatch}
 
   @moduledoc false
+  @hostname Application.get_env(:hanabi, :hostname)
+  @motd_file Application.get_env(:hanabi, :motd)
 
   def accept(port \\ 6667) do
     GenEvent.start_link(name: Events)
@@ -113,7 +115,23 @@ defmodule Hanabi.Server do
   end
 
   defp welcome(client, nick) do
-    Dispatch.send(client, ":irc.localhost 001 #{nick} Welcome to Hanabi !")
-    Dispatch.send(client, ":irc.localhost 002 #{nick} Yeah, it's pretty empty.")
+    if File.exists?(@motd_file) do
+      lines = File.stream!(@motd_file) |> Stream.map(&String.trim/1)
+                                       |> Stream.with_index
+                                       |> Stream.map(&pad(&1, nick))
+
+      for line <- lines do
+        Dispatch.send(client, ":#{@hostname} #{line}")
+      end
+    else
+      # 422 ERR_NOMOTD
+      Dispatch.reply(client, 422, "MOTD File is missing")
+    end
+  end
+
+  defp pad({line, index}, nick) do
+    padded_index = index |> Integer.to_string
+                         |> String.pad_leading(3, "0")
+    "#{padded_index} #{nick} #{line}"
   end
 end

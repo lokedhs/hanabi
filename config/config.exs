@@ -29,4 +29,5 @@ use Mix.Config
 #
 #     import_config "#{Mix.env}.exs"
 config :hanabi, port: 6667,
-                hostname: "irc.localhost"
+                hostname: "irc.localhost",
+                motd: "/tmp/motd.txt"

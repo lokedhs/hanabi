@@ -17,7 +17,8 @@ You must add (and fill) the following to your `config/config.exs` file :
 
 ```
 config :hanabi, port: 6667,
-                hostname: "my.awesome.hostname"
+                hostname: "my.awesome.hostname",
+                motd: "/path/to/motd.txt"
 ```
 
 You only have to add `hanabi` in the dependency section of your `mix.exs` file.
