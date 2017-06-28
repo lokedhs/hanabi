@@ -33,8 +33,8 @@ defmodule Hanabi.Control do
       {:ok, nil}
     end
 
-    def handle_info(%{privmsg: privmsg, sender: sender}, state) do
-      IO.puts "New message : #\{privmsg\}"
+    def handle_info(%{msg: msg}, state) do
+      IO.puts "New message : #\{msg\}"
       # do stuff
 
       {:noreply, state}

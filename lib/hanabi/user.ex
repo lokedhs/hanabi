@@ -106,8 +106,8 @@ defmodule Hanabi.User do
     # Broadcast part message
     Dispatch.broadcast_for(client, part_message)
 
-    Enum.each user.channels, fn(_channel) ->
-      :noop  # Remove NICK from CHANNEL
+    Enum.each user.channels, fn(channel) ->
+      part_channel(client, channel, part_message)
     end
 
     # Destroy user

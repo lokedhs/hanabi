@@ -5,6 +5,7 @@ services.
 
 ## Useful links
 
+  * Documentation [on hexdocs.pm](https://hexdocs.pm/hanabi/readme.html).
   * [RFC1459](https://tools.ietf.org/html/rfc1459) : Internet Relay Chat
   Protocol.
   * Parts of the IRC-related code were inspired by
@@ -28,7 +29,7 @@ Any other interaction with `Hanabi` should use the `Hanabi.Control` module.
 ## Struture
 
 Hanabi is splitted in a few modules, most of them are not displayed in the
-generated ([here](#)) documentation since they are not supposed
+generated ([here](https://hexdocs.pm/hanabi/readme.html)) documentation since they are not supposed
 to be used to be used out of Hanabi. Feel free to take to look to the [source
 code](https://github.com/Fnux/hanabi).
 
