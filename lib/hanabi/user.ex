@@ -35,7 +35,7 @@ defmodule Hanabi.User do
   def privmsg(client, dst, msg) do
     {:ok, user} = Registry.get :users, client
     ident = ident_for(user)
-    IO.inspect {status, lookup} = get_by_nick(dst)
+    {status, lookup} = get_by_nick(dst)
 
     unless status == :error do
       {_key, dst_user} = lookup
