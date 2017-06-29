@@ -10,10 +10,6 @@ defmodule Hanabi.Server do
     GenEvent.start_link(name: Events)
     GenEvent.add_handler(Events, Hanabi.Handler, [])
 
-    # Create the :users and :channels registries
-    Registry.create(:users)
-    Registry.create(:channels)
-
     case :gen_tcp.listen(port, [:binary, packet: :line, active: false, reuseaddr: true]) do
       { :ok, socket } ->
         Task.async(fn -> loop_acceptor(socket) end)
