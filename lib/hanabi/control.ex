@@ -67,6 +67,30 @@ defmodule Hanabi.Control do
   end
 
   @doc """
+  Register an user as `register_user/3` but override any user using the same
+  `key` or `nick`.
+  """
+  def set_user(pid, nick, key \\ nil) do
+    key = if key, do: key, else: nick
+
+    # Remove any user using the same key
+    {status, _} = Registry.get :users, key
+    unless status == :error do
+      unregister_user(key)
+    end
+
+    # Remove any user using the same nick
+    {nick_status, result} = get_user_by_nick(nick)
+    unless nick_status == :error do
+      {nick_key, _} = result
+      unregister_user(nick_key)
+    end
+
+    # Register our new user
+    register_user(pid, nick, key)
+  end
+
+  @doc """
   Remove a "bridge" user from the server.
   """
   def unregister_user(user_key) do
@@ -186,5 +210,18 @@ defmodule Hanabi.Control do
   def remove_user_from_channel(channel, user_key, part_msg \\ "") do
     {:ok, user} = Registry.get :users, user_key
     Channel.remove_user(channel, user, part_msg)
+  end
+
+  @doc """
+  Send a PRIVMSG to another user.
+
+  ## Example
+  ```
+  Hanabi.Control.register_user(self(), "system", :system)
+  Hanabi.Control.privmsg(:system, "fnux", "Howdy!")
+  ```
+  """
+  def privmsg(client, dst, msg) do
+    User.privmsg(client, dst, msg)
   end
 end
