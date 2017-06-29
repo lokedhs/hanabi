@@ -24,7 +24,6 @@ defmodule Hanabi.Channel do
     channel = struct(channel, %{users: channel.users
               ++ [{user.type, user.nick, user.port_or_pid}]})
     Registry.set :channels, channel_name, channel
-    IO.inspect channel
     Dispatch.broadcast(channel.users, "#{User.ident_for(user)} JOIN #{channel_name}")
   end
 
@@ -48,7 +47,7 @@ defmodule Hanabi.Channel do
     case Enum.any?(channel.users, fn ({_, _, conn}) -> conn == client end) do
       true ->
         users = Enum.reject(channel.users, fn ({_, _, conn}) -> conn == client end)
-        Dispatch.broadcast(users, "#{ident} PRIVMSG #{channel_name} #{msg}")
+        Dispatch.broadcast(users, "#{ident} PRIVMSG #{channel_name} #{msg}", client)
       false ->
         # 404 ERR_CANNOTSENDTOCHAN
         Dispatch.reply(client, "404", "#{user.nick} #{channel_name} :Cannot send to channel")

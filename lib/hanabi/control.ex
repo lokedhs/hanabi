@@ -15,7 +15,7 @@ defmodule Hanabi.Control do
 
   ## Messages
 
-  * `{:msg, message}`
+  * `{:msg, sender, message}`
   * `{:reply, code, message}`
 
   ## Example

@@ -39,7 +39,7 @@ defmodule Hanabi.User do
 
     unless status == :error do
       {_key, dst_user} = lookup
-      Dispatch.send(dst_user.port_or_pid, "#{ident} PRIVMSG #{dst} #{msg}")
+      Dispatch.send(dst_user.port_or_pid, "#{ident} PRIVMSG #{dst} #{msg}", client)
     else
       # 401 ERR_NOSUCHNICK
       Dispatch.reply(client, 401, "#{user.nick} #{dst} :No such nick/channel")

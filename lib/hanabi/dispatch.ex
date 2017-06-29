@@ -9,9 +9,9 @@ defmodule Hanabi.Dispatch do
   @doc """
   Send a message to an IRC or Hanabi client.
   """
-  def send(client, msg) do
+  def send(client, msg, sender \\ nil) do
     cond do
-      Kernel.is_pid(client) -> Kernel.send client, {:msg, msg}
+      Kernel.is_pid(client) -> Kernel.send client, {:msg, sender, msg}
       Kernel.is_port(client) -> send_irc(client, msg)
     end
   end
@@ -52,10 +52,10 @@ defmodule Hanabi.Dispatch do
   Hanabi.Dispatch.broadcast(users, "Hello world!")
   ```
   """
-  def broadcast(users, msg) do
+  def broadcast(users, msg, sender \\ nil) do
     Enum.each users, fn(user) ->
       {_type, _, client} = user
-      Hanabi.Dispatch.send client, msg
+      Hanabi.Dispatch.send client, msg, sender
     end
   end
 end
