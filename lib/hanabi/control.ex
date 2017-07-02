@@ -16,7 +16,6 @@ defmodule Hanabi.Control do
   ## Messages
 
   * `{:msg, sender, message}`
-  * `{:reply, code, message}`
 
   ## Example
   ```
@@ -121,6 +120,11 @@ defmodule Hanabi.Control do
   ```
   """
   def get_users(), do: User.get_all()
+
+  @doc """
+  Get an user from the registry given its key.
+  """
+  def get_user(user_key), do: Registry.get :users, user_key
 
   @doc """
   Find an user on the IRC server given its nickname.

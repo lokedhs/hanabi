@@ -11,24 +11,22 @@ defmodule Hanabi.Dispatch do
   """
   def send(client, msg, sender \\ nil) do
     cond do
-      Kernel.is_pid(client) -> Kernel.send client, {:msg, sender, msg}
-      Kernel.is_port(client) -> send_irc(client, msg)
+      Kernel.is_pid(client) -> send_pid(client, msg, sender)
+      Kernel.is_port(client) -> send_port(client, msg)
     end
   end
 
   # Send a message (`#\{msg\}\\r\\n`) to the given IRC client.
-  defp send_irc(client, msg), do: :gen_tcp.send(client, "#{msg}\r\n")
+  defp send_port(port, msg), do: :gen_tcp.send(port, "#{msg}\r\n")
+
+  # Send a message to the given process.
+  defp send_pid(pid, msg, sender), do:  Kernel.send pid, {:msg, sender, msg}
 
   @doc """
   Send a "reply" (including a code) to an IRC or Hanabi client.
   """
   def reply(client, code, msg) do
-    cond do
-      Kernel.is_pid(client) ->
-        Kernel.send client, {:reply, code, msg}
-      Kernel.is_port(client) ->
-        send_irc client, ":#{@hostname} #{code} #{msg}"
-    end
+    Hanabi.Dispatch.send client, ":#{@hostname} #{code} #{msg}"
   end
 
   @doc """
