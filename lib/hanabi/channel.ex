@@ -14,7 +14,7 @@ defmodule Hanabi.Channel do
   def get_all(), do: Registry.dump @table
 
   def update(key, value) do
-    {:ok, user} = User.get(key)
+    {:ok, user} = Channel.get(key)
     Registry.set @table, key, struct(user, value)
   end
 
