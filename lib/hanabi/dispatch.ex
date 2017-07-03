@@ -1,5 +1,5 @@
 defmodule Hanabi.Dispatch do
-  alias Hanabi.Registry
+  alias Hanabi.{User, Channel}
 
   @hostname Application.get_env :hanabi, :hostname
   @moduledoc """
@@ -33,9 +33,9 @@ defmodule Hanabi.Dispatch do
   Broadcast a message to all channels containing the user.
   """
   def broadcast_for(user_key, msg) do
-    {:ok, user} = Registry.get :users, user_key
+    {:ok, user} = User.get user_key
     Enum.each user.channels, fn(channel_name) ->
-      {:ok, channel} = Registry.get :channels, channel_name
+      {:ok, channel} = Channel.get channel_name
       broadcast channel.users, msg
     end
   end

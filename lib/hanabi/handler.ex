@@ -1,7 +1,7 @@
 defmodule Hanabi.Handler do
   require Logger
   use GenEvent
-  alias Hanabi.{User, Channel, Registry, Dispatch}
+  alias Hanabi.{User, Channel, Dispatch}
 
   @moduledoc false
 
@@ -44,7 +44,7 @@ defmodule Hanabi.Handler do
   # Handling stuff
 
   defp handle_nick(client, nick) do
-    {:ok, user} = Registry.get :users, client
+    {:ok, user} = User.get client
     validation_regex = ~r/\A[a-z_\-\[\]\\^{}|`][a-z0-9_\-\[\]\\^{}|`]{2,15}\z/
     cond do
       !String.match?(nick, validation_regex) ->
@@ -86,7 +86,7 @@ defmodule Hanabi.Handler do
 
   defp handle_topic(client, channel_name, topic_parts) do
     topic = Enum.join(topic_parts, " ")
-    {:ok, user} = Registry.get :users, client
+    {:ok, user} = User.get client
     Channel.set_topic(channel_name, user, topic)
   end
 

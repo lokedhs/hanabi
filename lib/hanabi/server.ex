@@ -1,6 +1,6 @@
 defmodule Hanabi.Server do
   require Logger
-  alias Hanabi.{Registry, User, Dispatch}
+  alias Hanabi.{User, Dispatch}
 
   @moduledoc false
   @hostname Application.get_env(:hanabi, :hostname)
@@ -32,11 +32,11 @@ defmodule Hanabi.Server do
   defp initial_serve(client) do
     case :gen_tcp.recv(client, 0) do
       { :ok, data } ->
-        user = case Registry.get(:users, client) do
+        user = case User.get(client) do
           {:ok, user} -> user
           {:error, _} ->
             user = struct(User)
-            Registry.set(:users, client, user)
+            User.set(client, user)
             user
         end
         #Agent.update(Users, fn users -> Dict.put_new(users, client, %{ channels: [] }) end)
@@ -52,14 +52,13 @@ defmodule Hanabi.Server do
                   Dispatch.reply(client, 433, "#{nick} :Nickname is already in use")
                 true ->
                   hostname = resolve_hostname(client)
-                  Registry.set(:users, client, struct(user,
-                                                      %{nick: List.to_string(nick),
-                                                        hostname: hostname,
-                                                        port_or_pid: client}))
+                  User.set(client, struct(user, %{nick: List.to_string(nick),
+                                                  hostname: hostname,
+                                                  port_or_pid: client}))
 
               end
           ["USER", username, _mode, _ | real_name_parts] ->
-            Registry.set(:users, client,
+            User.set(client,
                          struct(user, %{
                            username: username,
                            real_name:  Enum.join(real_name_parts, " ")}
@@ -68,7 +67,7 @@ defmodule Hanabi.Server do
           other -> Logger.debug "Received unknown message: #{Enum.join(other, "")}"
         end
 
-        {:ok, user} = Registry.get(:users, client)
+        {:ok, user} = User.get(client)
         unless user.nick == nil || user.hostname == nil || user.username == nil do
             # User has connected and sent through NICK + USER messages.
             Logger.debug "New user connected #{User.ident_for(user)}"

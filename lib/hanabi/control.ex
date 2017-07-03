@@ -1,5 +1,5 @@
 defmodule Hanabi.Control do
-  alias Hanabi.{Registry, User, Channel}
+  alias Hanabi.{User, Channel}
 
   @moduledoc """
   This module allows you to interact with the IRC server.
@@ -54,13 +54,10 @@ defmodule Hanabi.Control do
       port_or_pid: pid}
     )
     unless User.is_nick_in_use?(nick) do
-      unless key == nil do
-        Registry.set :users, key, user
-        else
-        Registry.set :users, nick, user
-      end
+      key = if key, do: key, else: nick
+      User.set(key, user)
       {:ok, user}
-      else
+    else
       {:error, :nick_in_use}
     end
   end
@@ -73,7 +70,7 @@ defmodule Hanabi.Control do
     key = if key, do: key, else: nick
 
     # Remove any user using the same key
-    {status, _} = Registry.get :users, key
+    {status, _} = User.get key
     unless status == :error do
       unregister_user(key)
     end
@@ -93,12 +90,12 @@ defmodule Hanabi.Control do
   Remove a "bridge" user from the server.
   """
   def unregister_user(user_key) do
-    {status, user} = Registry.get :users, user_key
+    {status, user} = User.get user_key
     if status == :ok do
       for channel <- user.channels do
         Channel.remove_user(channel, user.nick)
       end
-      Registry.drop :users, user_key
+      User.drop user_key
     else
       {:error, :not_such_user}
     end
@@ -124,7 +121,7 @@ defmodule Hanabi.Control do
   @doc """
   Get an user from the registry given its key.
   """
-  def get_user(user_key), do: Registry.get :users, user_key
+  def get_user(user_key), do: User.get user_key
 
   @doc """
   Find an user on the IRC server given its nickname.
@@ -157,23 +154,23 @@ defmodule Hanabi.Control do
    %Hanabi.Channel{topic: ":vlurps", users: [{:irc, "fnux", #Port<0.6645>}]}}]]
   ```
   """
-  def get_channels(), do: Registry.dump(:channels)
+  def get_channels(), do: Channel.get_all()
 
   @doc """
   Find a channel given its name.
 
   ## Examples
   ```
-  iex> Hanabi.Control.get_channel_by_name("#testchannel")
+  iex> Hanabi.Control.get_channel("#testchannel")
   {:ok,
  %Hanabi.Channel{topic: "topic",
   users: [{:irc, "fnux", #Port<0.6645>}, {:irc, "lambda", #Port<0.6679>}]}}
 
-  iex> Hanabi.Control.get_channel_by_name("#nonexistantchannel")
+  iex> Hanabi.Control.get_channel("#nonexistantchannel")
   {:error, :not_found}
   ```
   """
-  def get_channel_by_name(name), do: Registry.get(:channels, name)
+  def get_channel(name), do: Channel.get(name)
 
   @doc """
   Set the topic of a channel given its name.,
@@ -199,7 +196,7 @@ defmodule Hanabi.Control do
   ```
   """
   def add_user_to_channel(channel, user_key) do
-    {:ok, user} = Registry.get :users, user_key
+    {:ok, user} = User.get(user_key)
     Channel.add_user(channel, user)
   end
 
@@ -212,7 +209,7 @@ defmodule Hanabi.Control do
   ```
   """
   def remove_user_from_channel(channel, user_key, part_msg \\ "") do
-    {:ok, user} = Registry.get :users, user_key
+    {:ok, user} = User.get(user_key)
     Channel.remove_user(channel, user, part_msg)
   end
 

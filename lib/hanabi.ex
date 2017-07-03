@@ -1,5 +1,4 @@
 defmodule Hanabi do
-  alias Hanabi.Registry
   import Supervisor.Spec
 
   @moduledoc false
@@ -11,13 +10,11 @@ defmodule Hanabi do
   end
 
   def init(_) do
-    # Create the :users and :channels registries
-    Registry.create(:users)
-    Registry.create(:channels)
-
     # Supervisor
     children = [
-      worker(Task, [Hanabi.Server, :accept, [@port]]),
+      worker(Hanabi.Registry, [:users], [restart: :permanent, id: UserRegistry]),
+      worker(Hanabi.Registry, [:channels], [restart: :permanent, id: ChannelRegistry]),
+      worker(Task, [Hanabi.Server, :accept, [@port]], restart: :permanent),
     ]
 
     supervise(children, strategy: :one_for_one)

@@ -3,27 +3,60 @@ defmodule Hanabi.Registry do
 
   @moduledoc false
 
-  def create(name) do
+  def start_link(name) do
+    GenServer.start_link(__MODULE__, name, name: name)
+  end
+
+  def init(name) do
     table = :ets.new(name, [:named_table, :set, :public, read_concurrency: true])
     {:ok, table}
   end
 
+  ###
+
+  def handle_call({:set, key, value}, _from, table) do
+    reply = :ets.insert(table, {key, value})
+
+    {:reply, reply, table}
+  end
+
+  def handle_call({:get, key}, _from, table) do
+    lookup = :ets.lookup(table, key)
+
+    reply = case lookup do
+      [{_key, value}] -> {:ok, value}
+      [] -> {:error, nil}
+    end
+
+    {:reply, reply, table}
+  end
+
+  def handle_call({:drop, key}, _from, table) do
+    reply = :ets.delete(table, key)
+
+    {:reply, reply, table}
+  end
+
+  def handle_call(:dump, _from, table) do
+    reply = :ets.match(table, :"$1")
+    {:reply, reply, table}
+  end
+
+  ###
+
   def set(name, key, value) do
-    :ets.insert(name, {key, value})
+    GenServer.call name, {:set, key, value}
   end
 
   def get(name, key) do
-    case :ets.lookup(name, key) do
-      [{_key, value}] -> {:ok, value}
-      [] -> {:error, :not_found}
-    end
-  end
-
-  def dump(name) do
-    :ets.match(name, :"$1")
+    GenServer.call name, {:get, key}
   end
 
   def drop(name, key) do
-    :ets.delete(name, key)
+    GenServer.call name, {:drop, key}
+  end
+
+  def dump(name) do
+    GenServer.call name, :dump
   end
 end
