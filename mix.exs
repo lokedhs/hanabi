@@ -33,7 +33,10 @@ defmodule Hanabi.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:ex_doc, "~> 0.16", only: :dev, runtime: false}]
+    [
+      {:ex_doc, "~> 0.16", only: :dev, runtime: false},
+      {:exirc, "~> 1.0.1", only: :test, runtime: false}
+    ]
   end
 
   defp description do
