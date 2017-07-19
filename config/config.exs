@@ -31,3 +31,7 @@ use Mix.Config
 config :hanabi, port: 6667,
                 hostname: "irc.localhost",
                 motd: "/tmp/motd.txt"
+
+config :logger, :console,
+  format: "$time $metadata[$level] $levelpad$message\n",
+  metadata: [:application]

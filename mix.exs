@@ -3,7 +3,7 @@ defmodule Hanabi.Mixfile do
 
   def project do
     [app: :hanabi,
-     version: "0.0.3",
+     version: "0.0.5",
      elixir: "~> 1.4",
      description: description(),
      package: package(),
