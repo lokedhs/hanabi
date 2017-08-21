@@ -1,6 +1,8 @@
 defmodule Hanabi.Registry do
   use GenServer
 
+  # Used to create the 'users' and 'channels' tables.
+
   @moduledoc false
 
   def start_link(name) do
@@ -24,8 +26,8 @@ defmodule Hanabi.Registry do
     lookup = :ets.lookup(table, key)
 
     reply = case lookup do
-      [{_key, value}] -> {:ok, value}
-      [] -> {:error, nil}
+      [{_key, value}] -> value
+      [] -> nil
     end
 
     {:reply, reply, table}
