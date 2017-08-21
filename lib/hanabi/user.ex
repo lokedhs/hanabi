@@ -5,6 +5,7 @@ defmodule Hanabi.User do
 
   @table :hanabi_users # ETS table name, see Hanabi.Registry
   @hostname Application.get_env(:hanabi, :hostname)
+  @motd_file Application.get_env(:hanabi, :motd)
   @moduledoc """
   @TODO
   """
@@ -185,6 +186,45 @@ defmodule Hanabi.User do
         trailing: "No such nick/channel"
       }
       User.send sender, err
+    end
+  end
+
+  def send_motd(%User{}=user) do
+    if File.exists?(@motd_file) do
+      lines = File.stream!(@motd_file) |> Stream.map(&String.trim/1)
+
+      #RPL_MOTDSTART
+      User.send user, %Message{
+        prefix: @hostname,
+        command: @rpl_motdstart,
+        middle: user.nick,
+        trailing: "- #{@hostname} Message of the day - "
+      }
+
+      #RPL_MOTD
+      for line <- lines do
+      User.send user, %Message{
+          command: @rpl_motd,
+          prefix: @hostname,
+          middle: user.nick,
+          trailing: "- " <> line
+        }
+      end
+
+      #RPL_ENDOFMOTD
+      User.send user, %Message{
+        prefix: @hostname,
+        command: @rpl_endofmotd,
+        middle: user.nick,
+        trailing: "End of /MOTD command"
+      }
+    else
+      User.send user, %Message{
+        prefix: @hostname,
+        command: @err_nomotd,
+        middle: user.nick,
+        trailing: "MOTD File is missing"
+      }
     end
   end
 

@@ -7,8 +7,8 @@ services.
 
   * Documentation [on hexdocs.pm](https://hexdocs.pm/hanabi/readme.html).
   * [RFC1459](https://tools.ietf.org/html/rfc1459) : Internet Relay Chat
-  * https://modern.ircdocs.horse/
   Protocol.
+  * [modern.ircdocs.horse](https://modern.ircdocs.horse/)
   * Parts of the IRC-related code were inspired by
 [radar/elixir-irc](https://github.com/radar/elixir-irc).
 
@@ -23,5 +23,4 @@ config :hanabi, port: 6667,
 ```
 
 You only have to add `hanabi` in the dependency section of your `mix.exs` file.
-You can add `:hanabi` to `:extra_applications` in order to start it automatically,
-otherwise you would have to use `Hanabi.start()`.
+You can start it with `Hanabi.start/0` or `Hanabi.start/2`.

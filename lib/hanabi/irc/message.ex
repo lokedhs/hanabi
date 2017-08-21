@@ -4,7 +4,7 @@ defmodule Hanabi.IRC.Message do
 
   # See https://tools.ietf.org/html/rfc1459#section-2.3.1
   defstruct prefix: nil,
-    command: nil,
+    command: "nil",
     middle: nil,
     trailing: nil
 

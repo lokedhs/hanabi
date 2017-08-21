@@ -15,7 +15,8 @@ defmodule Hanabi do
       worker(Hanabi.Registry, [:hanabi_users], [restart: :permanent, id: UserRegistry]),
       worker(Hanabi.Registry, [:hanabi_channels], [restart: :permanent, id: ChannelRegistry]),
       worker(Hanabi.IRC.Handler, [], [restart: :permanent]),
-      worker(Task, [Hanabi.IRC.Server, :accept, [@port]], restart: :permanent),
+      supervisor(Hanabi.IRC.Supervisor, [], [restart: :permanent]),
+      worker(Task, [Hanabi.IRC.Endpoint, :accept, [@port]], restart: :permanent),
     ]
 
     supervise(children, strategy: :one_for_one)
