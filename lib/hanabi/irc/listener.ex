@@ -6,6 +6,7 @@ defmodule Hanabi.IRC.Listener do
 
   @moduledoc false
   @handler Hanabi.IRC.Handler
+  @authenticator Application.get_env(:hanabi, :authenticator) || Hanabi.Authenticator.AllowAllAuthenticator
 
   def start_link(client) do
     GenServer.start_link(__MODULE__, client)
@@ -60,8 +61,9 @@ defmodule Hanabi.IRC.Listener do
 
     msg = IRC.parse(data)
 
+
     case msg.command do
-      "PASS" -> :not_implemented # ignored
+      "PASS" -> GenServer.call(@handler, {client, msg})
       "NICK" -> GenServer.call(@handler, {client, msg})
       "USER" -> GenServer.call(@handler, {client, msg})
       _ -> Logger.debug "Ignored command (initial serve) : #{msg.command}"
@@ -69,6 +71,12 @@ defmodule Hanabi.IRC.Listener do
 
     user = User.get(client) # user was most likely modified
     if IRC.validate(:user, user) do
+      if @authenticator.authentication_required?() do
+        if !@authenticator.valid?(user) do
+          Logger.debug("Illegal authentication for #{User.ident_for(user)}. Disconnecting.")
+          Kernel.exit(:normal)
+        end
+      end
       Logger.debug "New IRC user : #{User.ident_for(user)}"
       User.send_motd(user)
       send self(), :serve

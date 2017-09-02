@@ -15,6 +15,7 @@ defmodule Hanabi.User do
     username: nil,
     realname: nil,
     hostname: nil,
+    pass: nil,
     type: :irc,
     port: nil,
     pid: nil,
@@ -128,6 +129,10 @@ defmodule Hanabi.User do
         # Only if the user already have a nickname
         if user.nick, do: User.broadcast user, rpl
     end
+  end
+
+  def set_pass(user, pass) do
+    User.update(user, pass: pass)
   end
 
   def register(:irc, user, %Message{}=msg) do
