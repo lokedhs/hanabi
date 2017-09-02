@@ -71,8 +71,8 @@ defmodule Hanabi.IRC.Listener do
 
     user = User.get(client) # user was most likely modified
     if IRC.validate(:user, user) do
-      if @authenticator.authentication_required?() do
-        if !@authenticator.valid?(user) do
+      if apply(@authenticator, :authentication_required?, []) do
+        if !apply(@authenticator, :valid?, [user]) do
           Logger.debug("Illegal authentication for #{User.ident_for(user)}. Disconnecting.")
           Kernel.exit(:normal)
         end
