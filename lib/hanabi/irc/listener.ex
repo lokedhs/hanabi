@@ -53,7 +53,7 @@ defmodule Hanabi.IRC.Listener do
   end
 
   defp initial_handle(client, data) do
-    # Însert a new user in the registry if it does not exist yet
+    # Insert a new user in the registry if it does not exist yet
     unless User.get(client) do
       User.set(client, struct(User, %{port: client, key: client}))
     end
